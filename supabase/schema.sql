@@ -53,13 +53,15 @@ CREATE TRIGGER set_products_updated_at
 -- 2. ENQUIRIES TABLE
 -- ==========================================================
 CREATE TABLE IF NOT EXISTS public.enquiries (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL CHECK (char_length(trim(name)) >= 2 AND char_length(name) <= 120),
     phone TEXT NOT NULL CHECK (char_length(trim(phone)) >= 7 AND char_length(phone) <= 25),
     email TEXT NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     message TEXT NOT NULL CHECK (char_length(trim(message)) >= 5 AND char_length(message) <= 2000),
-    product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
+    product_id UUID,
     read_status BOOLEAN NOT NULL DEFAULT false,
+    status TEXT DEFAULT 'pending',
+    status_text TEXT DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -106,11 +108,7 @@ CREATE POLICY "Public can submit enquiries"
     ON public.enquiries
     FOR INSERT
     TO anon, authenticated
-    WITH CHECK (
-        char_length(trim(name)) >= 2 AND
-        char_length(trim(phone)) >= 7 AND
-        char_length(trim(message)) >= 5
-    );
+    WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admin can view enquiries" ON public.enquiries;
 CREATE POLICY "Admin can view enquiries"

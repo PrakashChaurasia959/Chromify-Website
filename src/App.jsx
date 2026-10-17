@@ -13,7 +13,7 @@ import AdminLoginModal from './components/AdminLoginModal'
 import AdminDashboard from './components/AdminDashboard'
 import { MessageCircle } from 'lucide-react'
 import { BUSINESS_INFO, INITIAL_PRODUCTS } from './lib/productsData'
-import { fetchPublishedProducts, checkCurrentAdminSession } from './lib/supabaseClient'
+import { fetchPublishedProducts, checkCurrentAdminSession, supabase, ADMIN_EMAIL } from './lib/supabaseClient'
 
 export default function App() {
   const [products, setProducts] = useState(INITIAL_PRODUCTS)
@@ -25,10 +25,23 @@ export default function App() {
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
   const [adminSession, setAdminSession] = useState(null)
 
-  // Load published products and check admin session on mount
+  // Load published products and maintain live Supabase auth session
   useEffect(() => {
     loadProducts()
     checkSession()
+
+    // Real Supabase Auth listener across tabs and reloads
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        setAdminSession(session)
+      } else {
+        setAdminSession(null)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [])
 
   const loadProducts = async () => {
@@ -66,6 +79,11 @@ export default function App() {
   const handleLoginSuccess = (session) => {
     setAdminSession(session)
     setIsAdminDashboardOpen(true)
+  }
+
+  const handleAdminLogout = () => {
+    setAdminSession(null)
+    setIsAdminDashboardOpen(false)
   }
 
   // Lightbox Handlers
@@ -219,6 +237,7 @@ export default function App() {
         isOpen={isAdminDashboardOpen}
         session={adminSession}
         onClose={() => setIsAdminDashboardOpen(false)}
+        onLogout={handleAdminLogout}
         onRefreshPublicProducts={loadProducts}
       />
     </div>

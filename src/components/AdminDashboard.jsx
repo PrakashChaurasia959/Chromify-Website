@@ -36,7 +36,7 @@ import {
   checkSupabaseSchemaStatus
 } from '../lib/supabaseClient'
 
-export default function AdminDashboard({ isOpen, session, onClose, onRefreshPublicProducts }) {
+export default function AdminDashboard({ isOpen, session, onClose, onLogout, onRefreshPublicProducts }) {
   const [activeTab, setActiveTab] = useState('products') // 'products' | 'enquiries' | 'settings'
   const [products, setProducts] = useState([])
   const [enquiries, setEnquiries] = useState([])
@@ -303,6 +303,7 @@ export default function AdminDashboard({ isOpen, session, onClose, onRefreshPubl
   // Logout
   const handleLogout = async () => {
     await signOutAdmin()
+    if (onLogout) onLogout()
     onClose()
   }
 
@@ -371,7 +372,6 @@ export default function AdminDashboard({ isOpen, session, onClose, onRefreshPubl
               </h2>
               <span style={{ fontSize: '0.78rem', color: 'var(--slate-muted)' }}>
                 Administrator: <strong>{session?.user?.email || 'Chromify30@gmail.com'}</strong>
-                {session?.isDemo && ' (Authorized Access)'}
               </span>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { X, Lock, Shield, Mail, KeyRound, AlertCircle, Info, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react'
-import { signInAdmin, isSupabaseConfigured, createAuthorizedDevSession, ADMIN_EMAIL } from '../lib/supabaseClient'
+import { X, Lock, Shield, Mail, KeyRound, AlertCircle, Info, Eye, EyeOff } from 'lucide-react'
+import { signInAdmin, isSupabaseConfigured, ADMIN_EMAIL } from '../lib/supabaseClient'
 
 export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [email, setEmail] = useState('')
@@ -8,7 +8,6 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
-  const [canUseDevFallback, setCanUseDevFallback] = useState(false)
 
   const isConfigured = isSupabaseConfigured()
 
@@ -17,7 +16,6 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const handleLogin = async (e) => {
     e.preventDefault()
     setErrorMsg('')
-    setCanUseDevFallback(false)
     setLoading(true)
 
     const normalized = (email || '').trim().toLowerCase()
@@ -33,19 +31,9 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
       onClose()
     } catch (err) {
       setErrorMsg(err.message || 'Login failed. Please check your credentials.')
-      // If email matches authorized admin, provide immediate authorized bypass option
-      if (normalized === ADMIN_EMAIL.toLowerCase()) {
-        setCanUseDevFallback(true)
-      }
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleDevSession = () => {
-    const session = createAuthorizedDevSession()
-    onLoginSuccess(session)
-    onClose()
   }
 
   return (
@@ -143,15 +131,9 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
         >
           <Info size={16} color={isConfigured ? '#16A34A' : '#D97706'} style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
-            {isConfigured ? (
-              <span style={{ color: '#15803D', fontWeight: 600 }}>
-                Supabase Connected. Authenticating authorized admin (<strong>{ADMIN_EMAIL}</strong>).
-              </span>
-            ) : (
-              <span style={{ color: '#92400E', fontWeight: 600 }}>
-                To connect live Supabase Auth, add credentials to .env.
-              </span>
-            )}
+            <span style={{ color: '#15803D', fontWeight: 600 }}>
+              Supabase Authentication Active. Authenticating authorized administrator (<strong>{ADMIN_EMAIL}</strong>).
+            </span>
           </div>
         </div>
 
@@ -168,33 +150,12 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
               lineHeight: 1.5,
               marginBottom: '18px',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '10px'
+              alignItems: 'flex-start',
+              gap: '8px'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span>{errorMsg}</span>
-            </div>
-
-            {canUseDevFallback && (
-              <button
-                type="button"
-                onClick={handleDevSession}
-                className="btn btn-secondary btn-sm"
-                style={{
-                  alignSelf: 'flex-start',
-                  background: '#FFFFFF',
-                  borderColor: '#DC2626',
-                  color: '#B91C1C',
-                  fontSize: '0.78rem',
-                  fontWeight: 700
-                }}
-              >
-                <Sparkles size={14} />
-                <span>Continue as {ADMIN_EMAIL} (Instant Access)</span>
-              </button>
-            )}
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -289,7 +250,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '10px', justifyContent: 'center' }}
           >
-            {loading ? <span>Verifying Credentials...</span> : <span>Sign In to Dashboard</span>}
+            {loading ? <span>Verifying with Supabase...</span> : <span>Sign In with Supabase</span>}
           </button>
         </form>
       </div>
