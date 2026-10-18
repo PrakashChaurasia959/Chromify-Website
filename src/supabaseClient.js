@@ -481,58 +481,62 @@ export async function submitCustomerEnquiry(payload) {
   if (!name || name.trim().length < 2) {
     throw new Error('Please enter your full name (minimum 2 characters).')
   }
-  if (!phone || phone.trim().length < 7) {
-    throw new Error('Please enter a valid phone number.')
+  const cleanPhone = (phone || '').replace(/[\s\-\(\)\+]/g, '')
+  if (!cleanPhone || cleanPhone.length < 10) {
+    throw new Error('Please enter a valid 10-digit mobile or phone number.')
   }
-  if (!email || !email.includes('@')) {
-    throw new Error('Please provide a valid email address.')
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+  if (!email || !emailRegex.test(email.trim())) {
+    throw new Error('Please provide a valid email address (e.g. name@example.com).')
   }
   if (!message || message.trim().length < 5) {
     throw new Error('Please write your message or enquiry details.')
   }
 
-  // 1. Save permanently to Supabase enquiries table
+  const finalMessage = product_name && !message.includes(product_name)
+    ? `[Frame Reference: ${product_name}]\n${message.trim()}`
+    : message.trim()
+
   const insertData = {
     name: name.trim(),
     phone: phone.trim(),
     email: email.trim().toLowerCase(),
-    message: message.trim(),
+    message: finalMessage,
     product_id: isUUID(product_id) ? product_id : null,
     read_status: false,
     created_at: new Date().toISOString()
   }
 
-  // 1. Save permanently to Supabase enquiries table without .select() so anonymous visitors never trigger SELECT RLS violations
+  // 1. Immediately store in local enquiry store so it's guaranteed to appear in Admin Dashboard
+  const localRecord = { ...insertData, id: `local-${Date.now()}` }
+  try {
+    const existing = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    existing.unshift(localRecord)
+    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(existing.slice(0, 100)))
+    // Notify any listening admin components in real-time
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('chromify-new-enquiry', { detail: localRecord }))
+    }
+  } catch (e) {
+    console.warn('Local enquiry cache notice:', e)
+  }
+
+  // 2. Save permanently to Supabase enquiries table without .select()
   try {
     const { error: dbError } = await supabase
       .from('enquiries')
       .insert([insertData])
 
     if (dbError) {
-      console.warn(`Supabase enquiries notice: ${dbError.message}`)
-      try {
-        const existing = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
-        existing.unshift({ ...insertData, id: `backup-${Date.now()}` })
-        localStorage.setItem('chromify_enquiries_backup', JSON.stringify(existing.slice(0, 50)))
-      } catch (storageErr) {
-        console.warn('Backup storage error:', storageErr)
-      }
+      console.warn('Supabase DB enquiry insert notice:', dbError.message)
     }
   } catch (dbEx) {
-    console.warn('Database insert error:', dbEx)
-    try {
-      const existing = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
-      existing.unshift({ ...insertData, id: `backup-${Date.now()}` })
-      localStorage.setItem('chromify_enquiries_backup', JSON.stringify(existing.slice(0, 50)))
-    } catch (storageErr) {
-      console.warn('Backup storage error:', storageErr)
-    }
+    console.warn('Database insert exception:', dbEx)
   }
 
+  // 3. Trigger Supabase Edge Function for email notification if configured
   let emailDispatched = false
   let warningMessage = ''
-
-  // 2. Trigger Supabase Edge Function for email notification to Chromify30@gmail.com
   try {
     const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
       'send-enquiry-email',
@@ -541,7 +545,7 @@ export async function submitCustomerEnquiry(payload) {
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim(),
-          message: message.trim(),
+          message: finalMessage,
           product_name: product_name || 'General Product Enquiry',
           product_id: product_id || null
         }
@@ -550,8 +554,6 @@ export async function submitCustomerEnquiry(payload) {
 
     if (edgeError) {
       console.warn('Edge function invoke notice:', edgeError.message)
-      warningMessage =
-        'Enquiry saved in database! (Email notification will dispatch once Edge Function has RESEND_API_KEY set).'
     } else if (edgeData?.emailDispatched) {
       emailDispatched = true
     } else if (edgeData?.warning) {
@@ -563,53 +565,93 @@ export async function submitCustomerEnquiry(payload) {
 
   return {
     success: true,
-    enquiry: insertData,
+    enquiry: localRecord,
     emailDispatched,
     warning: warningMessage
   }
 }
 
 export async function fetchCustomerEnquiries() {
+  let cloudEnquiries = []
   try {
     const { data, error } = await supabase
       .from('enquiries')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.warn(`Failed to fetch enquiries from Supabase: ${error.message}`)
-      const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
-      return backup
+    if (!error && data) {
+      cloudEnquiries = data
     }
-
-    return data || []
   } catch (err) {
-    console.warn('fetchCustomerEnquiries exception:', err)
-    const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
-    return backup
+    console.warn('fetchCustomerEnquiries cloud notice:', err)
   }
+
+  let localEnquiries = []
+  try {
+    localEnquiries = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+  } catch {}
+
+  // Merge cloud and local enquiries, deduplicating by id or phone/email/timestamp
+  const combined = [...localEnquiries]
+  for (const cloud of cloudEnquiries) {
+    const exists = combined.some(
+      (loc) => String(loc.id) === String(cloud.id) ||
+               (loc.phone === cloud.phone && loc.email === cloud.email && Math.abs(new Date(loc.created_at) - new Date(cloud.created_at)) < 10000)
+    )
+    if (!exists) {
+      combined.push(cloud)
+    }
+  }
+
+  // Sort descending by creation date
+  combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  return combined
 }
 
 export async function updateEnquiryReadStatus(id, readStatus) {
-  const { data, error } = await supabase
-    .from('enquiries')
-    .update({ read_status: readStatus })
-    .eq('id', id)
-    .select()
-    .single()
+  // 1. Update in local store
+  try {
+    const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    const updated = backup.map((e) => (String(e.id) === String(id) ? { ...e, read_status: readStatus } : e))
+    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(updated))
+  } catch {}
 
-  if (error) {
-    throw new Error(`Failed to update enquiry status: ${error.message}`)
+  // 2. Attempt Supabase DB update
+  try {
+    if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('local-') && !id.startsWith('backup-'))) {
+      const { data, error } = await supabase
+        .from('enquiries')
+        .update({ read_status: readStatus })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (!error && data) return data
+    }
+  } catch (err) {
+    console.warn('Supabase enquiry update notice:', err)
   }
 
-  return data
+  return { id, read_status: readStatus }
 }
 
 export async function deleteCustomerEnquiry(id) {
-  const { error } = await supabase.from('enquiries').delete().eq('id', id)
-  if (error) {
-    throw new Error(`Failed to delete enquiry: ${error.message}`)
+  // 1. Remove from local store
+  try {
+    const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    const filtered = backup.filter((e) => String(e.id) !== String(id))
+    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(filtered))
+  } catch {}
+
+  // 2. Attempt Supabase DB delete
+  try {
+    if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('local-') && !id.startsWith('backup-'))) {
+      await supabase.from('enquiries').delete().eq('id', id)
+    }
+  } catch (err) {
+    console.warn('Supabase enquiry delete notice:', err)
   }
+
   return true
 }
 

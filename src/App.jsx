@@ -44,6 +44,22 @@ export default function App() {
     }
   }, [])
 
+  // Secret URL route listener for staff admin access (#admin or ?admin=true)
+  useEffect(() => {
+    const handleHashRoute = () => {
+      if (
+        window.location.hash === '#admin' ||
+        window.location.search.includes('admin=true') ||
+        window.location.pathname === '/admin'
+      ) {
+        handleOpenAdmin()
+      }
+    }
+    handleHashRoute()
+    window.addEventListener('hashchange', handleHashRoute)
+    return () => window.removeEventListener('hashchange', handleHashRoute)
+  }, [adminSession])
+
   const loadProducts = async () => {
     try {
       const liveProducts = await fetchPublishedProducts()

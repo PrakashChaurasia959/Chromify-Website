@@ -126,13 +126,13 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
             display: 'flex',
             gap: '10px',
             fontSize: '0.82rem',
-            alignItems: 'flex-start'
+            alignItems: 'center'
           }}
         >
-          <Info size={16} color={isConfigured ? '#16A34A' : '#D97706'} style={{ flexShrink: 0, marginTop: '2px' }} />
+          <Info size={16} color={isConfigured ? '#16A34A' : '#D97706'} style={{ flexShrink: 0 }} />
           <div>
             <span style={{ color: '#15803D', fontWeight: 600 }}>
-              Supabase Authentication Active. Authenticating authorized administrator (<strong>{ADMIN_EMAIL}</strong>).
+              Secure Authenticated Access • Authorized Personnel Only
             </span>
           </div>
         </div>
@@ -181,7 +181,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
                 type="email"
                 className="form-input"
                 style={{ paddingLeft: '42px' }}
-                placeholder={ADMIN_EMAIL}
+                placeholder="Enter administrator email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

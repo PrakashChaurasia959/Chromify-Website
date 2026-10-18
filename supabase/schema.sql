@@ -58,12 +58,19 @@ CREATE TABLE IF NOT EXISTS public.enquiries (
     phone TEXT NOT NULL CHECK (char_length(trim(phone)) >= 7 AND char_length(phone) <= 25),
     email TEXT NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     message TEXT NOT NULL CHECK (char_length(trim(message)) >= 5 AND char_length(message) <= 2000),
+    product_name TEXT,
     product_id UUID,
     read_status BOOLEAN NOT NULL DEFAULT false,
     status TEXT DEFAULT 'pending',
     status_text TEXT DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure backwards-compatible columns exist on existing databases
+ALTER TABLE public.enquiries ADD COLUMN IF NOT EXISTS product_name TEXT;
+ALTER TABLE public.enquiries ADD COLUMN IF NOT EXISTS read_status BOOLEAN DEFAULT false;
+ALTER TABLE public.enquiries ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE public.enquiries ADD COLUMN IF NOT EXISTS status_text TEXT DEFAULT 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_enquiries_read_status ON public.enquiries(read_status);
 CREATE INDEX IF NOT EXISTS idx_enquiries_created_at ON public.enquiries(created_at DESC);
@@ -357,3 +364,14 @@ VALUES
     true
 )
 ON CONFLICT (slug) DO NOTHING;
+
+-- ==========================================================
+-- 6. EXPLICIT GRANTS FOR ROLES
+-- ==========================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.products TO authenticated;
+GRANT SELECT ON public.products TO anon;
+
+GRANT INSERT ON public.enquiries TO anon, authenticated;
+GRANT SELECT, UPDATE, DELETE ON public.enquiries TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;

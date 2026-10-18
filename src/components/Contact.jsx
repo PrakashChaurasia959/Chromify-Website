@@ -31,17 +31,18 @@ export default function Contact({ prefilledProduct }) {
   const validate = () => {
     const errors = {}
     if (!formData.name.trim() || formData.name.trim().length < 2) {
-      errors.name = 'Please provide your name (at least 2 characters).'
+      errors.name = 'Please provide your full name (at least 2 characters).'
     }
-    const cleanPhone = formData.phone.replace(/\D/g, '')
-    if (!cleanPhone || cleanPhone.length < 8) {
-      errors.phone = 'Please enter a valid phone number (minimum 8 digits).'
+    const cleanPhone = formData.phone.replace(/[\s\-\(\)\+]/g, '')
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
+      errors.phone = 'Please enter a valid 10-digit mobile or phone number.'
     }
-    if (!formData.email.trim() || !formData.email.includes('@') || !formData.email.includes('.')) {
-      errors.email = 'Please provide a valid email address.'
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+    if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
+      errors.email = 'Please provide a valid email address (e.g. name@example.com).'
     }
     if (!formData.message.trim() || formData.message.trim().length < 5) {
-      errors.message = 'Please provide a message or details regarding your enquiry.'
+      errors.message = 'Please provide your requirements or questions (at least 5 characters).'
     }
     setFormErrors(errors)
     return Object.keys(errors).length === 0

@@ -166,30 +166,10 @@ export default function Footer({ onOpenAdmin }) {
                 <span>{BUSINESS_INFO.address}</span>
               </div>
 
-              <div style={{ paddingTop: '8px' }}>
-                <button
-                  onClick={onOpenAdmin}
-                  style={{
-                    background: 'none',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#94A3B8',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    transition: 'all 180ms ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF'
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#94A3B8'
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'
-                  }}
-                >
-                  Admin Management Login
-                </button>
+              <div style={{ paddingTop: '6px' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                  Business Hours: Mon – Sat (9:00 AM – 8:00 PM IST)
+                </span>
               </div>
             </div>
           </div>
@@ -210,6 +190,25 @@ export default function Footer({ onOpenAdmin }) {
         >
           <p style={{ margin: 0 }}>
             © {currentYear} Chromify. All rights reserved. Frame Your Moments. Make Them Timeless.
+            <span style={{ margin: '0 8px', opacity: 0.3 }}>•</span>
+            <a
+              href="#admin"
+              onClick={(e) => {
+                e.preventDefault()
+                onOpenAdmin()
+              }}
+              style={{
+                color: '#475569',
+                fontSize: '0.8rem',
+                textDecoration: 'none',
+                transition: 'color 180ms ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
+              title="Staff Access"
+            >
+              Staff Portal
+            </a>
           </p>
 
           <button

@@ -78,6 +78,19 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
     }
   }, [isOpen])
 
+  // Listen for real-time customer enquiry submissions
+  useEffect(() => {
+    const handleLiveEnquiry = (e) => {
+      const newEnq = e.detail
+      if (newEnq) {
+        setEnquiries((prev) => [newEnq, ...prev.filter((item) => String(item.id) !== String(newEnq.id))])
+        showNotify('success', `New enquiry received from ${newEnq.name}!`)
+      }
+    }
+    window.addEventListener('chromify-new-enquiry', handleLiveEnquiry)
+    return () => window.removeEventListener('chromify-new-enquiry', handleLiveEnquiry)
+  }, [])
+
   const loadData = async () => {
     setLoading(true)
     try {

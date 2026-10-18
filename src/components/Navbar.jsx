@@ -151,13 +151,11 @@ export default function Navbar({ onOpenAdmin, onOpenEnquiry }) {
         {/* Desktop Actions */}
         <div style={{ display: 'none', alignItems: 'center', gap: '12px' }} className="desktop-actions">
           <button
-            onClick={onOpenAdmin}
-            className="btn btn-secondary btn-sm"
-            style={{ borderRadius: 'var(--radius-full)', gap: '6px' }}
-            title="Manage Products & Enquiries"
+            onClick={onOpenEnquiry}
+            className="btn btn-primary btn-sm"
+            style={{ borderRadius: 'var(--radius-full)' }}
           >
-            <Shield size={16} />
-            Admin
+            Enquire Now
           </button>
 
           <a
@@ -225,13 +223,12 @@ export default function Navbar({ onOpenAdmin, onOpenEnquiry }) {
             <button
               onClick={() => {
                 setMobileMenuOpen(false)
-                onOpenAdmin()
+                onOpenEnquiry()
               }}
-              className="btn btn-secondary"
+              className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              <Shield size={16} />
-              Admin Portal
+              Send Frame Enquiry
             </button>
 
             <a
