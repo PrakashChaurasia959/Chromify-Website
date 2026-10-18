@@ -9,11 +9,11 @@ import Contact from './components/Contact'
 import Footer from './components/Footer'
 import Lightbox from './components/Lightbox'
 import EnquiryModal from './components/EnquiryModal'
-import AdminLoginModal from './components/AdminLoginModal'
+import AdminLoginPage from './components/AdminLoginPage'
 import AdminDashboard from './components/AdminDashboard'
 import { MessageCircle } from 'lucide-react'
 import { BUSINESS_INFO, INITIAL_PRODUCTS } from './lib/productsData'
-import { fetchPublishedProducts, checkCurrentAdminSession, supabase, ADMIN_EMAIL } from './lib/supabaseClient'
+import { fetchPublishedProducts, checkCurrentAdminSession, signOutAdmin, supabase, ADMIN_EMAIL } from './lib/supabaseClient'
 
 export default function App() {
   const [products, setProducts] = useState(INITIAL_PRODUCTS)
@@ -21,8 +21,12 @@ export default function App() {
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [enquiryProduct, setEnquiryProduct] = useState(null)
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false)
-  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false)
-  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
+  const [isAdminView, setIsAdminView] = useState(
+    typeof window !== 'undefined' &&
+      (window.location.hash === '#admin' ||
+        window.location.search.includes('admin=true') ||
+        window.location.pathname === '/admin')
+  )
   const [adminSession, setAdminSession] = useState(null)
 
   // Load published products and maintain live Supabase auth session
@@ -36,7 +40,6 @@ export default function App() {
         setAdminSession(session)
       } else if (!session) {
         setAdminSession(null)
-        setIsAdminDashboardOpen(false)
       } else {
         checkSession()
       }
@@ -47,21 +50,23 @@ export default function App() {
     }
   }, [])
 
-  // Secret URL route listener for staff admin access (#admin or ?admin=true)
+  // URL route listener for staff admin access (#admin or ?admin=true or /admin)
   useEffect(() => {
     const handleHashRoute = () => {
-      if (
+      const isRouteAdmin =
         window.location.hash === '#admin' ||
         window.location.search.includes('admin=true') ||
         window.location.pathname === '/admin'
-      ) {
-        handleOpenAdmin()
-      }
+      setIsAdminView(isRouteAdmin)
     }
     handleHashRoute()
     window.addEventListener('hashchange', handleHashRoute)
-    return () => window.removeEventListener('hashchange', handleHashRoute)
-  }, [adminSession])
+    window.addEventListener('popstate', handleHashRoute)
+    return () => {
+      window.removeEventListener('hashchange', handleHashRoute)
+      window.removeEventListener('popstate', handleHashRoute)
+    }
+  }, [])
 
   const loadProducts = async () => {
     try {
@@ -87,22 +92,30 @@ export default function App() {
 
   // Handle Admin Button Click
   const handleOpenAdmin = () => {
-    if (adminSession) {
-      setIsAdminDashboardOpen(true)
-    } else {
-      setIsAdminLoginOpen(true)
+    window.location.hash = '#admin'
+    setIsAdminView(true)
+  }
+
+  const handleBackToStore = () => {
+    setIsAdminView(false)
+    if (window.location.hash === '#admin') {
+      window.location.hash = '#home'
     }
   }
 
   // Handle Login Success
   const handleLoginSuccess = (session) => {
     setAdminSession(session)
-    setIsAdminDashboardOpen(true)
+    setIsAdminView(true)
   }
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    await signOutAdmin()
     setAdminSession(null)
-    setIsAdminDashboardOpen(false)
+    setIsAdminView(false)
+    if (window.location.hash === '#admin') {
+      window.location.hash = '#home'
+    }
   }
 
   // Lightbox Handlers
@@ -161,6 +174,28 @@ export default function App() {
   const scrollTo = (id) => {
     const el = document.getElementById(id)
     if (el) el.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Dedicated Admin Route View (for #admin, /admin, or ?admin=true)
+  if (isAdminView) {
+    if (!adminSession) {
+      return (
+        <AdminLoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onBackToStore={handleBackToStore}
+        />
+      )
+    }
+
+    return (
+      <AdminDashboard
+        isOpen={true}
+        session={adminSession}
+        onClose={handleBackToStore}
+        onLogout={handleAdminLogout}
+        onRefreshPublicProducts={loadProducts}
+      />
+    )
   }
 
   return (
@@ -257,22 +292,6 @@ export default function App() {
           setIsEnquiryModalOpen(false)
           setEnquiryProduct(null)
         }}
-      />
-
-      {/* Admin Login Modal */}
-      <AdminLoginModal
-        isOpen={isAdminLoginOpen}
-        onClose={() => setIsAdminLoginOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
-      {/* Admin Dashboard */}
-      <AdminDashboard
-        isOpen={isAdminDashboardOpen && Boolean(adminSession)}
-        session={adminSession}
-        onClose={() => setIsAdminDashboardOpen(false)}
-        onLogout={handleAdminLogout}
-        onRefreshPublicProducts={loadProducts}
       />
     </div>
   )
