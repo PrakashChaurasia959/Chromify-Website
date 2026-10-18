@@ -458,7 +458,7 @@ export async function submitCustomerEnquiry(payload) {
 
   return {
     success: true,
-    enquiry: savedEnquiry,
+    enquiry: insertData,
     emailDispatched,
     warning: warningMessage
   }
