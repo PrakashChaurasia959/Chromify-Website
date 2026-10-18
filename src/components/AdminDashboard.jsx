@@ -325,7 +325,8 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
     onClose()
   }
 
-  if (!isOpen) return null
+  // Strictly ensure dashboard is only rendered for authenticated admin sessions
+  if (!isOpen || !session) return null
 
   return (
     <div
@@ -736,7 +737,67 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
 
           {/* TAB 2: ENQUIRIES */}
           {activeTab === 'enquiries' && (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Enquiry Metrics & Total Count Header */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '14px'
+                }}
+              >
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    padding: '16px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #E2E8F0',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Total Enquiries
+                  </span>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--navy-dark)', marginTop: '4px' }}>
+                    {enquiries.length}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    padding: '16px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #FECDD3',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#BE123C', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    New / Unread
+                  </span>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#E11D48', marginTop: '4px' }}>
+                    {enquiries.filter((e) => !e.read_status).length}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    padding: '16px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #BBF7D0',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Contacted / Processed
+                  </span>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#16A34A', marginTop: '4px' }}>
+                    {enquiries.filter((e) => e.read_status).length}
+                  </div>
+                </div>
+              </div>
+
               {enquiries.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', background: '#FFFFFF', borderRadius: 'var(--radius-lg)' }}>
                   <MessageSquare size={36} color="var(--slate-light)" style={{ margin: '0 auto 12px' }} />
@@ -751,6 +812,7 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {enquiries.map((enq) => {
                     const cleanPhone = (enq.phone || '').replace(/\D/g, '')
+                    const frameRef = enq.product_name || (enq.message && enq.message.match(/\[Frame Reference:\s*([^\]]+)\]/)?.[1])
                     return (
                       <div
                         key={enq.id}
@@ -774,6 +836,11 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
                               {!enq.read_status && (
                                 <span style={{ background: '#EC4899', color: '#FFFFFF', fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                                   New
+                                </span>
+                              )}
+                              {frameRef && (
+                                <span style={{ background: '#F3E8FF', color: '#7E22CE', fontSize: '0.74rem', fontWeight: 600, padding: '2px 10px', borderRadius: '6px' }}>
+                                  Frame: {frameRef}
                                 </span>
                               )}
                             </div>
@@ -953,8 +1020,8 @@ CREATE POLICY "Public can view published products"
 
 CREATE POLICY "Admin full access to products"
     ON public.products FOR ALL TO authenticated
-    USING (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com')
-    WITH CHECK (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com');
+    USING (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com')
+    WITH CHECK (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com');
 
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)

@@ -100,8 +100,8 @@ CREATE POLICY "Admin full access to products"
     ON public.products
     FOR ALL
     TO authenticated
-    USING (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com')
-    WITH CHECK (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com');
+    USING (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com')
+    WITH CHECK (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com');
 
 -- ----------------------------------------------------------
 -- ENQUIRIES POLICIES:
@@ -122,22 +122,22 @@ CREATE POLICY "Admin can view enquiries"
     ON public.enquiries
     FOR SELECT
     TO authenticated
-    USING (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com');
+    USING (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com');
 
 DROP POLICY IF EXISTS "Admin can update enquiries" ON public.enquiries;
 CREATE POLICY "Admin can update enquiries"
     ON public.enquiries
     FOR UPDATE
     TO authenticated
-    USING (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com')
-    WITH CHECK (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com');
+    USING (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com')
+    WITH CHECK (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com');
 
 DROP POLICY IF EXISTS "Admin can delete enquiries" ON public.enquiries;
 CREATE POLICY "Admin can delete enquiries"
     ON public.enquiries
     FOR DELETE
     TO authenticated
-    USING (lower(auth.jwt() ->> 'email') = 'chromify30@gmail.com');
+    USING (lower(trim(auth.jwt() ->> 'email')) = 'chromify30@gmail.com');
 
 -- ==========================================================
 -- 4. SUPABASE STORAGE BUCKET FOR PRODUCT IMAGES
@@ -375,3 +375,4 @@ GRANT SELECT ON public.products TO anon;
 GRANT INSERT ON public.enquiries TO anon, authenticated;
 GRANT SELECT, UPDATE, DELETE ON public.enquiries TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO anon, authenticated;

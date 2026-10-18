@@ -34,6 +34,9 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         setAdminSession(session)
+      } else if (!session) {
+        setAdminSession(null)
+        setIsAdminDashboardOpen(false)
       } else {
         checkSession()
       }
@@ -265,7 +268,7 @@ export default function App() {
 
       {/* Admin Dashboard */}
       <AdminDashboard
-        isOpen={isAdminDashboardOpen}
+        isOpen={isAdminDashboardOpen && Boolean(adminSession)}
         session={adminSession}
         onClose={() => setIsAdminDashboardOpen(false)}
         onLogout={handleAdminLogout}

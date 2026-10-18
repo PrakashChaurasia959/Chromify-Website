@@ -1,18 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
-import { INITIAL_PRODUCTS } from './lib/productsData'
+import { INITIAL_PRODUCTS } from './lib/productsData.js'
 
 // Dedicated Supabase configuration with production defaults for seamless Netlify deployment
 const DEFAULT_SUPABASE_URL = 'https://gvsbviwfnggbamdegoeh.supabase.co'
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_cbZy7b6fg5zbUyHk-JnjxQ_dYTyxxS7'
 
 const envUrl = (
-  import.meta.env.VITE_SUPABASE_URL ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
   DEFAULT_SUPABASE_URL
 ).trim()
 
 const envKey = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.VITE_SUPABASE_ANON_KEY)) ||
   DEFAULT_SUPABASE_ANON_KEY
 ).trim()
 
@@ -255,6 +254,7 @@ export async function fetchPublishedProducts() {
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .eq('published', true)
       .order('created_at', { ascending: false })
 
     if (!error && data && data.length > 0) {
@@ -272,6 +272,11 @@ export async function fetchPublishedProducts() {
 }
 
 export async function fetchAllProductsAdmin() {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can access product management.')
+  }
+
   let baseProducts = []
   try {
     const { data, error } = await supabase
@@ -293,6 +298,10 @@ export async function fetchAllProductsAdmin() {
 }
 
 export async function createProduct(productData, imageFile) {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can add products.')
+  }
   if (!productData.name || productData.name.trim().length < 2) {
     throw new Error('Product name must be at least 2 characters long.')
   }
@@ -372,6 +381,10 @@ export async function createProduct(productData, imageFile) {
 }
 
 export async function updateProduct(id, productData, imageFile) {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can update products.')
+  }
   if (!productData.name || productData.name.trim().length < 2) {
     throw new Error('Product name must be at least 2 characters long.')
   }
@@ -454,6 +467,10 @@ export async function updateProduct(id, productData, imageFile) {
 }
 
 export async function deleteProduct(id, slug) {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can delete products.')
+  }
   // 1. Attempt Supabase DB delete
   try {
     if (isUUID(id)) {
@@ -572,6 +589,11 @@ export async function submitCustomerEnquiry(payload) {
 }
 
 export async function fetchCustomerEnquiries() {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can view customer enquiries.')
+  }
+
   let cloudEnquiries = []
   try {
     const { data, error } = await supabase
@@ -581,6 +603,8 @@ export async function fetchCustomerEnquiries() {
 
     if (!error && data) {
       cloudEnquiries = data
+    } else if (error) {
+      console.warn('fetchCustomerEnquiries cloud notice:', error.message)
     }
   } catch (err) {
     console.warn('fetchCustomerEnquiries cloud notice:', err)
@@ -609,6 +633,11 @@ export async function fetchCustomerEnquiries() {
 }
 
 export async function updateEnquiryReadStatus(id, readStatus) {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can update enquiry status.')
+  }
+
   // 1. Update in local store
   try {
     const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
@@ -636,6 +665,11 @@ export async function updateEnquiryReadStatus(id, readStatus) {
 }
 
 export async function deleteCustomerEnquiry(id) {
+  const session = await checkCurrentAdminSession()
+  if (!session) {
+    throw new Error('Access denied. Only authenticated administrator can delete customer enquiries.')
+  }
+
   // 1. Remove from local store
   try {
     const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
@@ -695,7 +729,7 @@ export async function signInAdmin(email, password) {
 
   // 2. Secure credential verification using authorized admin hash or env configuration
   let isAuthorized = false
-  const envPass = import.meta.env.VITE_ADMIN_PASSWORD || ''
+  const envPass = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ADMIN_PASSWORD) || ''
 
   if (envPass && trimmedPass === envPass) {
     isAuthorized = true
