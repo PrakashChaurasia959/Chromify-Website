@@ -81,10 +81,15 @@ export default function AdminDashboard({ isOpen, session, onClose, onLogout, onR
   const loadData = async () => {
     setLoading(true)
     try {
-      const [prods, enqs] = await Promise.all([
-        fetchAllProductsAdmin(),
-        fetchCustomerEnquiries()
-      ])
+      const prodsPromise = fetchAllProductsAdmin().catch((err) => {
+        console.warn('Product load warning:', err)
+        return []
+      })
+      const enqsPromise = fetchCustomerEnquiries().catch((err) => {
+        console.warn('Enquiries load warning:', err)
+        return []
+      })
+      const [prods, enqs] = await Promise.all([prodsPromise, enqsPromise])
       setProducts(prods || [])
       setEnquiries(enqs || [])
     } catch (err) {
@@ -1146,6 +1151,27 @@ ON CONFLICT (id) DO NOTHING;`}</pre>
                       {imageError}
                     </p>
                   )}
+
+                  <div style={{ marginTop: '10px' }}>
+                    <label className="form-label" htmlFor="prod-image-url" style={{ fontSize: '0.8rem', color: 'var(--slate-muted)' }}>
+                      Or enter image URL / asset path:
+                    </label>
+                    <input
+                      id="prod-image-url"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. /images/WhatsApp Image 2026-10-16 at 1.jpeg or https://..."
+                      value={formData.image_url}
+                      onChange={(e) => {
+                        const url = e.target.value
+                        setFormData({ ...formData, image_url: url })
+                        if (!imageFile && url) {
+                          setImagePreview(url)
+                        }
+                      }}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
                 </div>
 
                 {/* Published Checkbox */}

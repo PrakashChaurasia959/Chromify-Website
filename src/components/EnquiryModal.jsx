@@ -24,8 +24,17 @@ export default function EnquiryModal({ isOpen, product, onClose }) {
       })
       setResult(null)
       setFormErrors({})
+    } else if (isOpen) {
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        message: 'Hi Chromify, I am interested in custom photo frames. Please share available styles, custom sizes, and pricing.'
+      })
+      setResult(null)
+      setFormErrors({})
     }
-  }, [product])
+  }, [product, isOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -38,10 +47,12 @@ export default function EnquiryModal({ isOpen, product, onClose }) {
     }
   }, [isOpen])
 
-  if (!isOpen || !product) return null
+  if (!isOpen) return null
 
   const getWhatsAppUrl = () => {
-    const text = `Hi Chromify, I want to enquire about the "${product.name}". Please share details and pricing.`
+    const text = product
+      ? `Hi Chromify, I want to enquire about the "${product.name}". Please share details and pricing.`
+      : 'Hi Chromify, I want to enquire about custom photo frames and pricing.'
     return `${BUSINESS_INFO.whatsappBase}?text=${encodeURIComponent(text)}`
   }
 
@@ -76,8 +87,8 @@ export default function EnquiryModal({ isOpen, product, onClose }) {
         phone: formData.phone,
         email: formData.email,
         message: formData.message,
-        product_name: product.name,
-        product_id: product.id
+        product_name: product ? product.name : 'General Framing Enquiry',
+        product_id: product ? product.id : null
       })
 
       setResult({
@@ -154,10 +165,10 @@ export default function EnquiryModal({ isOpen, product, onClose }) {
         {/* Modal Header */}
         <div style={{ marginBottom: '20px' }}>
           <span className="pill pill-purple" style={{ marginBottom: '8px' }}>
-            Product Enquiry
+            {product ? 'Product Enquiry' : 'Custom Frame Enquiry'}
           </span>
           <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--navy-dark)', margin: '4px 0' }}>
-            Enquire About This Frame
+            {product ? 'Enquire About This Frame' : 'Custom Sizing & Frame Enquiry'}
           </h3>
           <p style={{ fontSize: '0.88rem', color: 'var(--slate-muted)', margin: 0 }}>
             Connect with Chromify to check availability, customized sizing, and pricing.
@@ -165,40 +176,82 @@ export default function EnquiryModal({ isOpen, product, onClose }) {
         </div>
 
         {/* Product Preview Snippet */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '14px',
-            alignItems: 'center',
-            padding: '12px 14px',
-            background: '#F8FAFC',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid #E2E8F0',
-            marginBottom: '22px'
-          }}
-        >
-          <img
-            src={product.image_url}
-            alt={product.name}
+        {product ? (
+          <div
             style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '10px',
-              objectFit: 'cover'
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'center',
+              padding: '12px 14px',
+              background: '#F8FAFC',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid #E2E8F0',
+              marginBottom: '22px'
             }}
-          />
-          <div>
-            <span style={{ fontSize: '0.74rem', color: 'var(--purple-primary)', fontWeight: 700, textTransform: 'uppercase' }}>
-              {product.category}
-            </span>
-            <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--navy-dark)', margin: '2px 0 0' }}>
-              {product.name}
-            </h4>
-            <span style={{ fontSize: '0.82rem', color: '#EA580C', fontWeight: 600 }}>
-              Price on Request
-            </span>
+          >
+            <img
+              src={product.image_url}
+              alt={product.name}
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '10px',
+                objectFit: 'cover'
+              }}
+            />
+            <div>
+              <span style={{ fontSize: '0.74rem', color: 'var(--purple-primary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                {product.category}
+              </span>
+              <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--navy-dark)', margin: '2px 0 0' }}>
+                {product.name}
+              </h4>
+              <span style={{ fontSize: '0.82rem', color: '#EA580C', fontWeight: 600 }}>
+                Price on Request
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              gap: '14px',
+              alignItems: 'center',
+              padding: '12px 14px',
+              background: '#F8FAFC',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid #E2E8F0',
+              marginBottom: '22px'
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #7C3AED 0%, #2563EB 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                flexShrink: 0
+              }}
+            >
+              <Send size={20} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.74rem', color: 'var(--purple-primary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                Chromify Custom Framing
+              </span>
+              <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--navy-dark)', margin: '2px 0 0' }}>
+                Custom Dimensions & Frame Consultations
+              </h4>
+              <span style={{ fontSize: '0.82rem', color: 'var(--slate-muted)' }}>
+                Tell us your memory dimensions and we'll craft the right frame
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Fast WhatsApp Option */}
         <div style={{ marginBottom: '22px' }}>

@@ -209,7 +209,10 @@ export default function Collections({ products, onSelectProduct, onOpenEnquiry, 
                 {/* Image Container with zoom click */}
                 <div
                   className="product-image-wrap"
-                  onClick={() => onOpenLightbox(product.image_url, product.name, product.description)}
+                  onClick={() => {
+                    const globalIdx = products.findIndex((p) => (p.id && p.id === product.id) || p.slug === product.slug)
+                    onOpenLightbox(product.image_url, product.name, product.description, globalIdx >= 0 ? globalIdx : 0)
+                  }}
                   title="Click to view full photo"
                 >
                   <img

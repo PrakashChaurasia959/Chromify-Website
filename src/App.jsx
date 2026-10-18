@@ -35,7 +35,7 @@ export default function App() {
       if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         setAdminSession(session)
       } else {
-        setAdminSession(null)
+        checkSession()
       }
     })
 
@@ -88,14 +88,27 @@ export default function App() {
 
   // Lightbox Handlers
   const handleOpenLightbox = (imageUrl, name, description, index) => {
-    const photo = { image_url: imageUrl, name, description }
-    setLightboxPhoto(photo)
-    setLightboxIndex(index !== undefined ? index : 0)
+    const list = products && products.length > 0 ? products : INITIAL_PRODUCTS
+    let finalIdx = index
+    if (finalIdx === undefined || finalIdx === null || finalIdx < 0) {
+      const found = list.findIndex((p) => p.image_url === imageUrl || p.name === name)
+      finalIdx = found >= 0 ? found : 0
+    }
+    const currentItem = list[finalIdx] || { image_url: imageUrl, name, description }
+    setLightboxPhoto({
+      image_url: imageUrl || currentItem.image_url,
+      name: name || currentItem.name,
+      description: description || currentItem.description,
+      category: currentItem.category
+    })
+    setLightboxIndex(finalIdx)
   }
 
   const handleNextPhoto = () => {
-    const nextIdx = (lightboxIndex + 1) % INITIAL_PRODUCTS.length
-    const nextItem = INITIAL_PRODUCTS[nextIdx]
+    const list = products && products.length > 0 ? products : INITIAL_PRODUCTS
+    if (!list.length) return
+    const nextIdx = (lightboxIndex + 1) % list.length
+    const nextItem = list[nextIdx]
     setLightboxIndex(nextIdx)
     setLightboxPhoto({
       image_url: nextItem.image_url,
@@ -106,8 +119,10 @@ export default function App() {
   }
 
   const handlePrevPhoto = () => {
-    const prevIdx = (lightboxIndex - 1 + INITIAL_PRODUCTS.length) % INITIAL_PRODUCTS.length
-    const prevItem = INITIAL_PRODUCTS[prevIdx]
+    const list = products && products.length > 0 ? products : INITIAL_PRODUCTS
+    if (!list.length) return
+    const prevIdx = (lightboxIndex - 1 + list.length) % list.length
+    const prevItem = list[prevIdx]
     setLightboxIndex(prevIdx)
     setLightboxPhoto({
       image_url: prevItem.image_url,
