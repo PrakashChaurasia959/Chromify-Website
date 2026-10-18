@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Shield, Lock, Mail, KeyRound, Eye, EyeOff, AlertCircle, ArrowLeft, CheckCircle2, Info } from 'lucide-react'
 import { signInAdmin, isSupabaseConfigured, ADMIN_EMAIL } from '../lib/supabaseClient'
 
@@ -248,7 +248,7 @@ export default function AdminLoginPage({ onLoginSuccess, onBackToStore }) {
             </div>
             {email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() && email.length > 0 && (
               <span style={{ fontSize: '0.78rem', color: '#F87171', marginTop: '6px', display: 'block' }}>
-                ⚠ Only {ADMIN_EMAIL} is authorized. Other accounts will be rejected.
+                âš  Only {ADMIN_EMAIL} is authorized. Other accounts will be rejected.
               </span>
             )}
           </div>
@@ -368,3 +368,5 @@ export default function AdminLoginPage({ onLoginSuccess, onBackToStore }) {
     </div>
   )
 }
+
+
