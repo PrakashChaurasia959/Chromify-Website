@@ -167,9 +167,40 @@ const PRODUCTS_CACHE_KEY = 'chromify_custom_products'
 const DELETED_CACHE_KEY = 'chromify_deleted_products'
 export const ADMIN_SESSION_KEY = 'chromify_admin_session'
 
+let inMemoryAdminSession = null
+const memoryStore = new Map()
+
+export function safeStorageGet(key) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const val = window.localStorage.getItem(key)
+      if (val !== null && val !== undefined) return val
+    }
+  } catch {}
+  return memoryStore.get(key) || null
+}
+
+export function safeStorageSet(key, value) {
+  memoryStore.set(key, value)
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value)
+    }
+  } catch {}
+}
+
+export function safeStorageRemove(key) {
+  memoryStore.delete(key)
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key)
+    }
+  } catch {}
+}
+
 function getLocalCache(key) {
   try {
-    const data = localStorage.getItem(key)
+    const data = safeStorageGet(key)
     return data ? JSON.parse(data) : []
   } catch {
     return []
@@ -178,7 +209,7 @@ function getLocalCache(key) {
 
 function setLocalCache(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    safeStorageSet(key, JSON.stringify(value))
   } catch (e) {
     console.warn('Local cache write error:', e)
   }
@@ -527,9 +558,9 @@ export async function submitCustomerEnquiry(payload) {
   // 1. Immediately store in local enquiry store so it's guaranteed to appear in Admin Dashboard
   const localRecord = { ...insertData, id: `local-${Date.now()}` }
   try {
-    const existing = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    const existing = JSON.parse(safeStorageGet('chromify_enquiries_backup') || '[]')
     existing.unshift(localRecord)
-    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(existing.slice(0, 100)))
+    safeStorageSet('chromify_enquiries_backup', JSON.stringify(existing.slice(0, 100)))
     // Notify any listening admin components in real-time
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('chromify-new-enquiry', { detail: localRecord }))
@@ -612,7 +643,7 @@ export async function fetchCustomerEnquiries() {
 
   let localEnquiries = []
   try {
-    localEnquiries = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    localEnquiries = JSON.parse(safeStorageGet('chromify_enquiries_backup') || '[]')
   } catch {}
 
   // Merge cloud and local enquiries, deduplicating by id or phone/email/timestamp
@@ -640,9 +671,9 @@ export async function updateEnquiryReadStatus(id, readStatus) {
 
   // 1. Update in local store
   try {
-    const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    const backup = JSON.parse(safeStorageGet('chromify_enquiries_backup') || '[]')
     const updated = backup.map((e) => (String(e.id) === String(id) ? { ...e, read_status: readStatus } : e))
-    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(updated))
+    safeStorageSet('chromify_enquiries_backup', JSON.stringify(updated))
   } catch {}
 
   // 2. Attempt Supabase DB update
@@ -672,9 +703,9 @@ export async function deleteCustomerEnquiry(id) {
 
   // 1. Remove from local store
   try {
-    const backup = JSON.parse(localStorage.getItem('chromify_enquiries_backup') || '[]')
+    const backup = JSON.parse(safeStorageGet('chromify_enquiries_backup') || '[]')
     const filtered = backup.filter((e) => String(e.id) !== String(id))
-    localStorage.setItem('chromify_enquiries_backup', JSON.stringify(filtered))
+    safeStorageSet('chromify_enquiries_backup', JSON.stringify(filtered))
   } catch {}
 
   // 2. Attempt Supabase DB delete
@@ -717,8 +748,9 @@ export async function signInAdmin(email, password) {
 
     if (!error && data?.session) {
       if (data.session.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        inMemoryAdminSession = data.session
         try {
-          localStorage.removeItem(ADMIN_SESSION_KEY)
+          safeStorageRemove(ADMIN_SESSION_KEY)
         } catch {}
         return data.session
       }
@@ -758,8 +790,9 @@ export async function signInAdmin(email, password) {
       access_token: `chromify-auth-${Date.now()}`,
       isLocalSession: true
     }
+    inMemoryAdminSession = authorizedSession
     try {
-      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(authorizedSession))
+      safeStorageSet(ADMIN_SESSION_KEY, JSON.stringify(authorizedSession))
     } catch {}
     return authorizedSession
   }
@@ -768,18 +801,24 @@ export async function signInAdmin(email, password) {
 }
 
 export async function signOutAdmin() {
+  inMemoryAdminSession = null
   try {
     await supabase.auth.signOut()
   } catch {}
   try {
-    localStorage.removeItem(ADMIN_SESSION_KEY)
+    safeStorageRemove(ADMIN_SESSION_KEY)
   } catch {}
 }
 
 export async function checkCurrentAdminSession() {
+  if (inMemoryAdminSession && inMemoryAdminSession?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    return inMemoryAdminSession
+  }
+
   try {
     const { data } = await supabase.auth.getSession()
     if (data?.session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      inMemoryAdminSession = data.session
       return data.session
     }
   } catch (err) {
@@ -787,10 +826,11 @@ export async function checkCurrentAdminSession() {
   }
 
   try {
-    const local = localStorage.getItem(ADMIN_SESSION_KEY)
+    const local = safeStorageGet(ADMIN_SESSION_KEY)
     if (local) {
       const parsed = JSON.parse(local)
       if (parsed?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        inMemoryAdminSession = parsed
         return parsed
       }
     }
